@@ -341,6 +341,8 @@ size_t ImageWindow::height() {
 template void ImageWindow::display<unsigned char>(Image<unsigned char> image);
 template void ImageWindow::display<unsigned short>(Image<unsigned short> image);
 template void ImageWindow::display<float>(Image<float> image);
-template class Image<unsigned char>;
-template class Image<unsigned short>;
-template class Image<float>;
+namespace images {
+    template class Image<unsigned char>;
+    template class Image<unsigned short>;
+    template class Image<float>;
+}
