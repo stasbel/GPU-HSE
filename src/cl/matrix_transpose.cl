@@ -17,5 +17,5 @@ __kernel void matrix_transpose(__global float *a, __global float *r, int h, int 
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    if (gi < h && gj < w) r[(kj * ls + lj) * gw + (ki * ls + li)] = la[li * ls + lj];
+    if (gi < h && gj < w) r[(kj * ls + li) * gw + (ki * ls + lj)] = la[lj * ls + li];
 }
