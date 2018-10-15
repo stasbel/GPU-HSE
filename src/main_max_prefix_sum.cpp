@@ -96,9 +96,9 @@ int main(int argc, char **argv)
             ocl::Kernel kernel(max_prefix_sum_kernel,  max_prefix_sum_kernel_length, "max_prefix_sum");
             kernel.compile(true);
 
-            ocl::LocalMem cnums(workGroupSize * sizeof(int));
-            ocl::LocalMem cmaxs(workGroupSize * sizeof(int));
-            ocl::LocalMem cidxs(workGroupSize * sizeof(int));
+            ocl::LocalMem lns(workGroupSize * sizeof(int));
+            ocl::LocalMem lms(workGroupSize * sizeof(int));
+            ocl::LocalMem lis(workGroupSize * sizeof(int));
 
             timer t;
             for (int iter = 0; iter < benchmarkingIters; ++iter) {
@@ -108,14 +108,14 @@ int main(int argc, char **argv)
                     gcs[i] = i + 1;
                 }
 
-                unsigned nn = n;
+                auto nn = (unsigned int) n;
                 while (nn > 1) {
                     nums.writeN(gas.data(), nn);
                     maxs.writeN(gbs.data(), nn);
                     idxs.writeN(gcs.data(), nn);
 
                     unsigned workSize = (nn / workGroupSize + (nn % workGroupSize ? 1 : 0)) * workGroupSize;
-                    kernel.exec(gpu::WorkSize(workGroupSize, workSize), nn, nums, maxs, idxs, cnums, cmaxs, cidxs);
+                    kernel.exec(gpu::WorkSize(workGroupSize, workSize), nums, maxs, idxs, nn, lns, lms, lis);
                     nums.readN(gas.data(), nn);
                     maxs.readN(gbs.data(), nn);
                     idxs.readN(gcs.data(), nn);
@@ -127,6 +127,7 @@ int main(int argc, char **argv)
                         gcs[i] = gcs[i * workGroupSize];
                         i++;
                     }
+
                     nn = i;
                 }
 
