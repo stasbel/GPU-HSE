@@ -21,6 +21,7 @@ void raiseFail(const T &a, const T &b, const std::string &message, std::string f
 
 #define EXPECT_THE_SAME(a, b, message) raiseFail(a, b, message, __FILE__, __LINE__)
 
+
 gpu::gpu_mem_32u prefixSum(ocl::Kernel &scan, gpu::gpu_mem_32u &as_gpu, unsigned int n, unsigned int wg_size) {
     unsigned int res_n = (n + wg_size - 1) / wg_size * wg_size;
 
