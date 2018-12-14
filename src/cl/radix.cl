@@ -12,11 +12,12 @@ __kernel void count(
         __global unsigned int *as, __global unsigned int *cs,
         unsigned int n, unsigned int mask_offset, unsigned int mask_width
 ) {
-    unsigned int gid = get_global_id(0), mask = ((1UL << mask_width) - 1) << mask_offset, n_vals = 1 << mask_width;
+    unsigned int g_id = get_global_id(0), mask = ((1UL << mask_width) - 1) << mask_offset;
 
-    if (gid < n) {
-        for (int i = 0; i < n_vals; i++)
-            cs[i * n + gid] = ((as[gid] & mask) >> mask_offset) == i ? 1 : 0;
+    if (g_id < n) {
+        for (int i = 0; i < (1 << mask_width); i++) {
+            cs[i * n + g_id] = ((as[g_id] & mask) >> mask_offset) == i ? 1 : 0;
+        }
     }
 }
 
@@ -24,29 +25,30 @@ __kernel void scan(
         __global unsigned int *as, __global unsigned int *bs, __global unsigned int *cs,
         unsigned int n, int zero_bs
 ) {
-    unsigned int gid = get_global_id(0), lid = get_local_id(0), block_size = get_local_size(0), gr_id = get_group_id(0);
+    unsigned int g_id = get_global_id(0), l_id = get_local_id(0), wg_size = get_local_size(0), gr_id = get_group_id(0);
 
-    __local unsigned int local_a[WORK_GROUP_SIZE], local_b[WORK_GROUP_SIZE];
-    __local unsigned int *a = local_a, *b = local_b;
+    __local unsigned int las[WORK_GROUP_SIZE], lbs[WORK_GROUP_SIZE];
+    __local unsigned int *a = las, *b = lbs;
 
-    if (gid < n) {
-        a[lid] = as[gid];
+    if (g_id < n) {
+        a[l_id] = as[g_id];
 
-        if (lid == 0) {
-            if (!zero_bs)
+        if (l_id == 0) {
+            if (!zero_bs) {
                 a[0] += bs[gr_id];
+            }
         }
     } else {
-        a[lid] = 0;
+        a[l_id] = 0;
     }
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    for (int s = 1; s < block_size; s <<= 1) {
-        if (lid > (s - 1)) {
-            b[lid] = a[lid] + a[lid - s];
+    for (int s = 1; s < wg_size; s <<= 1) {
+        if (l_id > (s - 1)) {
+            b[l_id] = a[l_id] + a[l_id - s];
         } else {
-            b[lid] = a[lid];
+            b[l_id] = a[l_id];
         }
 
         barrier(CLK_LOCAL_MEM_FENCE);
@@ -56,11 +58,12 @@ __kernel void scan(
         b = tmp;
     }
 
-    if (gid < n) {
-        cs[gid] = a[lid];
+    if (g_id < n) {
+        cs[g_id] = a[l_id];
 
-        if (lid == 0)
-            bs[gr_id + 1] = a[block_size - 1];
+        if (l_id == 0) {
+            bs[gr_id + 1] = a[wg_size - 1];
+        }
     }
 }
 
@@ -68,9 +71,9 @@ __kernel void reorder(
         __global unsigned int *as, __global unsigned int *os, __global unsigned int *bs,
         unsigned int n, unsigned int mask_offset, unsigned int mask_width
 ) {
-    unsigned int gid = get_global_id(0), mask = ((1UL << mask_width) - 1) << mask_offset, n_vals = 1 << mask_width;
+    unsigned int g_id = get_global_id(0), mask = ((1UL << mask_width) - 1) << mask_offset;
 
-    if (gid < n) {
-        bs[os[((as[gid] & mask) >> mask_offset) * n + gid] - 1] = as[gid];
+    if (g_id < n) {
+        bs[os[((as[g_id] & mask) >> mask_offset) * n + g_id] - 1] = as[g_id];
     }
 }
